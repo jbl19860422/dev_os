@@ -1,0 +1,47 @@
+asm(".code16gcc");
+#include "memory.h"
+int g_iMemConfCount = 0;
+char *g_pMallocStart = NULL;
+ARDStructure g_memConf[MAX_MEM_CONF];
+void ReadMemConf()
+{
+	/*
+	int i = 0;
+	int iReadMemConfError = 0;
+	int iEBX = 0;
+	BOOL bNotReadMemConfEnd = TRUE;
+	*/
+	//ARDStructure *pARD = g_memConf;
+	//g_iMemConfCount = 0;
+	/*
+	while(!iReadMemConfError)//∂¡»°ƒ⁄¥Ê≈‰÷√Œﬁ¥ÌŒÛ£¨≤¢«“Œ¥Ω· ¯
+	{
+		__asm__ __volatile__ (
+			"PUSHW %%ES\n\t"
+			"MOVL %%EDI,%%EAX\n\t"
+			"SHRL $4, %%EAX\n\t"
+			"MOVW %%AX,%%ES\n\t"
+			"ANDW $0x0F,%%DI\n\t"
+			"MOVL $0xe820,%%EAX\n\t"
+			"MOVL $0x534d4150,%%EDX\n\t"
+			"MOVL $20,%%ECX\n\t"
+		"1:\n\t"
+			"INT $0x15\n\t"
+			"JC ReadMemConfError\n\t"
+			"MOVL $0,%%EDX\n\t"
+			"JMP 2f\n\t"
+		"ReadMemConfError:\n\t"
+			"MOVL $-1,%%EDX\n\t"
+		"2:\n\t"
+			"POPW %%ES\n\t"
+			:"=b" (iEBX), "=d" (iReadMemConfError)
+			:"D" (&g_memConf[g_iMemConfCount]), "b" (iEBX)
+		);
+		g_iMemConfCount++;
+		if(iEBX == 0)
+		{
+			break;
+		}
+		//pARD++;
+	}*/
+}

@@ -1,0 +1,32 @@
+.include "pm_def.inc"
+.global _start
+.section .text
+	.code16
+	_start:
+		lgdt (GDT_PTR)
+		cli
+		inb $0x92, %al
+		or $0x02, %al
+		out %al, $0x92
+		movw %cr0, %eax
+		orw $0x1, %eax
+		movw %eax, %cr0
+DATA32	ljmp $SelectorCode32,  
+		
+		
+.section .gdt
+LABEL_GDT:
+	DESCRIPTOR 0x0,0x0,0x0
+LABEL_DESC_CODE32:
+	DESCRIPTOR 0x0,0xFFFFF,$DA_TYPE_EXECUTE|$DA_S_DC|$DA_DPL_0|$DA_P_1|$DA_DB_SEGLIMIT_4G|$DA_G_LIMITBYTE
+LABEL_DESC_DATA32:
+	DESCRIPTOR 0x0,0xFFFFF,$DA_TYPE_DATA_WRITE|$DA_S_DC|$DA_DPL_0|$DA_P_1|$DA_DB_SEGLIMIT_4G|$DA_G_LIMITBYTE
+LABEL_DESC_VIDEO:
+	DESCRIPTOR 0xB8000, 0xFFFFF,$DA_TYPE_DATA_WRITE|$DA_S_DC|$DA_DPL_0|$DA_P_1|$DA_DB_SEGLIMIT_4G|$DA_G_LIMITBYTE
+.set SelectorCode32,(LABEL_DESC_CODE32-LABEL_GDT)
+.set SelectorData32,(LABEL_DESC_DATA32-LABEL_GDT)
+.set SelectorVideo, (LABEL_DESC_VIDEO-LABEL_GDT)
+.set GtdLen,.-LABEL_GDT
+GDT_PTR:
+	.WORD 0x800
+	.LONG LABEL_GDT

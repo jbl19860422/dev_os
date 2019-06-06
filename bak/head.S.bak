@@ -1,0 +1,75 @@
+.global _start
+.code16
+.section .text
+.section .data
+_start: 
+	movw %cs,%ax
+	movw %ax,%ds
+	movw %ax,%es
+	movw %ax,%fs
+	movw %sp,%sp
+	movw $_s_operate_msg,%si
+	sti
+	cld
+msg_loop:
+	lodsb
+	andb %al,%al
+	jz _end
+	movb $0xe,%ah
+	movw $7,%bx
+	int $0x10
+	jmp msg_loop
+_end:
+	movw %cs,%ax
+	pushw $0x1234
+	call DisplayWord
+	popw %ax
+	jmp .
+
+DisplayWord:
+	movw %sp,%bp
+	pushw %cx
+	pushw %dx
+	pushw %ax
+	movw %cx,-2(%bp)
+	movb %ch,%al
+	shr $4,%al
+	call DisplayAL
+	movb %ch,%al
+	andb $0x0f,%al
+	call DisplayAL
+	movb %cl,%al
+	shr $4,%al
+	call DisplayAL
+	movb %cl,%al
+	andb $0x0f,%al
+	call DisplayAL
+	popw %ax
+	popw %dx
+	popw %cx
+	ret
+DisplayAL:
+	pushw %bx
+	pushw %ax
+	mov $10,%al
+	cmp $10,%al
+	jl 1f
+	subb $10,%al
+	addb $'A',%al
+	jmp 2f
+1:
+	addb $'0',%al
+2:
+	movb $65,%al	
+	movw $7,%bx
+	movb $0xe,%ah
+	int $0x10	
+	popw %ax
+	popw %bx	
+	ret
+_s_operate_msg:
+.ascii "this is DDKJiang's Operating System\r\n"
+.byte 0
+len=.-_s_operate_msg
+.org 510
+.word 0xAA55

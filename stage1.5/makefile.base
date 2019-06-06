@@ -1,0 +1,18 @@
+STAGE1_5=/home/jiangbaolin/myos/stage1.5
+STATE1_5_INC=${STAGE1_5}
+BASE_INC=${STAGE1_5}/base/inc
+BASE_LIB=${STAGE1_5}/base/lib
+MEMORY_INC=${STAGE1_5}/memory
+ATA_INC=${STAGE1_5}/ata
+DRIVER=${STAGE1_5}/driver
+PCI_INC=${DRIVER}/pci
+8259_INC=${STAGE1_5}/driver/8259
+VGA_INC=${DRIVER}/vga
+CDROM_INC=${DRIVER}/cdrom
+INTR_INC=${STAGE1_5}/interrupt
+WINDOW_INC=${STAGE1_5}/window
+MOUSE_INC=${DRIVER}/mouse
+ALL_INC=-m32 -march=i386 -I${STATE1_5_INC} -I${BASE_INC} -I${MEMORY_INC} -I${ATA_INC} -I${PCI_INC} -I${INTR_INC} -I${8259_INC} \
+-I${VGA_INC} -I${CDROM_INC} -I${WINDOW_INC} -I${MOUSE_INC}
+ALL_LIB=-L${BASE_LIB}
+ALL_LINK=-lbase

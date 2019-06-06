@@ -1,0 +1,110 @@
+#include "cdrom.h"
+DWORD g_iDriverNum = 0;
+void InitCDRom()
+{
+	g_iDriverNum = *((int *)(0x8400-4));
+	PrintMsg("DriverNum:");
+	PrintDword(g_iDriverNum);
+	PrintMsg("\r\n");
+}
+int FindRootFile(char *sFileName,FD_DESCRIPTOR* fd)
+{
+	int iRet = 0;
+	//分配内存，读取卷标
+	int rootSectorBuff = GetFreePage(1);
+	if(rootSectorBuff == NULL)
+	{
+		PrintMsg("GetFreePage err.");
+		return -1;
+	}
+	short seg, off;
+	DecodeAddrTo16Mode(rootSectorBuff,&seg,&off);
+	//读取根卷标
+  	iRet = ReadSector(CDROM_ROOT_SECTOR,0x0,1,seg,off);
+	if(0 != iRet)
+	{
+		PrintMsg("read sector err\r\n");
+		return -2;
+	}
+	FD_DESCRIPTOR *pRootDirRec = ((VOLUME_DESCRIPTOR *)rootSectorBuff)->RootDirRec;// 第16扇区存储的是一个卷描述符,其中有一个根目录的描述符
+	int iRootSector = pRootDirRec->iLocOfExtBig;//一般系统都是大端格式，后面再改吧
+	int iRootSectorCount = (pRootDirRec->iDataLenBig/CDROM_LEN_PER_SECTOR)+1;
+	FreePage(rootSectorBuff);
+	int buffer = GetFreePage(iRootSectorCount*CDROM_LEN_PER_SECTOR/4096+1);
+	DecodeAddrTo16Mode(buffer,&seg,&off);
+	//读取根目录内容
+	iRet = ReadSector(iRootSector,0x0,iRootSectorCount,seg,off);
+	if(0 != iRet)
+	{
+		return -3;
+	}
+	//开始搜索 
+	int iPos = 0;
+	while(sFileName[iPos] == '/')
+	{
+		iPos++;
+	}
+	iPos++;
+	//iPos指向第一个不是/的字符
+	char sFileNameTmp[256];//256够大了
+	int iFindDir = 1;// 是否找到了需要的目录文件
+	int iFindFile = 0;//是否找到了文件
+	int iCount = 0;
+	FD_DESCRIPTOR *pRec;
+	FD_DESCRIPTOR fd_tmp;
+	while(sFileName[iPos] != '/')
+	{
+		sFileNameTmp[iCount++] = sFileName[iPos++];
+	}
+	sFileNameTmp[iCount++] = '\0';
+	while(iFindDir == 1 /*找到了目录文件*/)
+	{
+		if(sFileName[iPos] == '\0')
+		{//找到文件了
+			iFindFile = 1;
+		}
+		else
+		{
+			// 在一个目录中查找文件
+			pRec = (FD_DESCRIPTOR *)buffer;
+			char cLen= pRec->cDirRecLen;
+			iFindDir = 0;
+			while(cLen>0)
+			{
+				if(0 == CmpStr32(pRec->sFileName, sFileNameTmp))
+				{
+					iFindDir = 1;
+					//*fd = *pRec;
+					break;
+				}
+				
+				if(iFindDir == 1)//找到了这一层的文件
+				{
+					if(sFileName[iPos] != '\0')// 这个文件不是最终的文件，继续查找
+					{
+						int iRootSector = pRootDirRec->iLocOfExtBig;//一般系统都是大端格式，后面再改吧
+						int iRootSectorCount = (pRootDirRec->iDataLenBig/CDROM_LEN_PER_SECTOR)+1;
+					}	
+				}
+				else
+				{
+					pRec = (FD_DESCRIPTOR*)((char *)pRec+cLen);
+					cLen = pRec->cDirRecLen;
+				}
+			}
+		}
+	}
+	
+	if(iFindFile == 1)
+	{
+		char *msg="find file\r\n";
+		PrintMsg(msg);
+	}
+	else
+	{
+		char *msg1="not find file\r\n";
+		PrintMsg(msg1);
+	}
+	FreePage(buffer);
+	return iFindFile;
+}

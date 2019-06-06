@@ -1,0 +1,46 @@
+GLOBAL DisplayMsg
+[SECTION .text]
+[BITS 16]
+DisplayMsg:
+	PUSH EBP
+	MOV EBP,ESP
+	PUSH SI
+	PUSH DI
+	PUSH DX
+	PUSH AX
+	MOV ESI,[EBP+8]
+	STI
+	CLD
+.1:	
+	LODSB
+	AND AL,AL
+	JZ .2
+	MOV BYTE AH,0eh
+	MOV BX,7
+	INT 010h
+	JMP .1
+.2:
+	POP AX
+	POP DX
+	POP DI
+	POP SI
+	MOV ESP,EBP
+	POP EBP
+	RET
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,275 @@
+.global _start
+.code16
+.section .text
+.section .data
+_start: 
+	MOVW %CS,%AX
+	MOVW %AX,%DS
+	MOVW %AX,%ES
+	MOVW %AX,%FS
+	MOVW %AX,%SP
+	PUSHW $_s_operate_msg
+	CALL DisplayMsg
+	ADD $2,%SP
+	PUSHW %CS
+	CALL DisplayWord
+	ADD $2,%SP
+	PUSHW %DX
+	CALL checkInt13h
+	ADD $2,%SP
+	CMPW $1,%AX
+	JZ Support13H
+	JNZ NotSupport13H
+Support13H:
+	MOVW $Packet,%SI
+	INT $0x13
+	JC 1f
+	JNC 2f
+1:
+	PUSHW $ReadErrMsg
+	JMP 3f
+2:
+	PUSHW $ReadOkMsg
+	JMP 3f
+3:
+	CALL DisplayMsg
+	ADD $2,%SP
+	PUSHW %AX
+	CALL DisplayWord
+	ADD $2,%SP
+	PUSHW $_driver_msg
+	CALL DisplayMsg
+	ADD $2,%SP
+	MOVB $0,%DH
+	PUSHW %DX
+	CALL DisplayWord
+	ADD $2,%SP
+	PUSHW $_13h_msg
+	CALL DisplayMsg
+	ADD $2,%SP
+	MOVW $0x1234,(0x7e00)
+	PUSHW $0x7e00
+	PUSHW $40
+	CALL DisplayMem
+	ADD $4,%SP
+	PUSHW $1
+	PUSHW $0x400
+	PUSHW $0x07C0
+	CALL ReadPacket
+	ADD $6,%SP
+	PUSHW $0x400
+	PUSHW $40
+	CALL DisplayMem
+	ADD $4,%SP
+	JMP .
+NotSupport13H:
+	PUSHW $_driver_msg
+        CALL DisplayMsg
+        ADD $2,%SP
+        MOVB $0,%DH
+        PUSHW %DX
+        CALL DisplayWord
+        ADD $2,%SP
+	PUSHW $_no_13h_msg
+	CALL DisplayMsg
+	ADD $2,%SP
+	JMP .
+_driver_msg:
+	.ascii "driver no:"
+	.byte 0
+_13h_msg:
+	.ascii " support 13h\r\n"
+	.byte 0
+_no_13h_msg:
+	.ascii " not support 13h\r\n"
+	.byte 0
+checkInt13h:
+	MOVW %SP,%BP
+	MOVW 2(%BP),%DX
+	MOVB $0x41,%AH
+	MOVW $0x55AA,%BX
+	INT $0x13
+	CMPW $0xAA55,%BX
+	JNZ 1f   #no support
+	JZ 2f    #support
+1:
+	MOVW $0,%AX
+	JMP 3f
+2:
+	MOVW $1,%AX
+3:
+	RET
+popupDriver:
+	MOVW %SP,%BP
+	MOVW 2(%BP),%DX
+	MOVB $0x46,%AH
+	INT $0x13
+	JC 2f
+	JNC 1f
+1:
+	PUSHW $PopupSucc
+	JMP 3f
+2:
+	PUSHW $PopupFail
+	JMP 3f
+3:
+	CALL DisplayMsg
+	ADD $2,%SP
+	RET
+PopupSucc:
+	.ascii "popup succ\r\n"
+	.byte 0
+PopupFail:
+	.ascii "popup fail\r\n"
+	.byte 0 	
+DisplayWord:
+	movw %sp,%bp
+	pushw %cx
+	pushw %dx
+	pushw %ax
+	movw 2(%bp),%cx
+	movb %ch,%al
+	shr $4,%al
+	call DisplayAL
+	movb %ch,%al
+	andb $0x0f,%al
+	call DisplayAL
+	movb %cl,%al
+	shr $4,%al
+	call DisplayAL
+	movb %cl,%al
+	andb $0x0f,%al
+	call DisplayAL
+	popw %ax
+	popw %dx
+	popw %cx
+	ret
+DisplayMem:
+	MOVW %SP,%BP
+	MOVW 2(%BP),%CX
+	MOVW 4(%BP),%SI
+1:
+	PUSHW (%SI)
+	CALL DisplayWord
+	ADD $2,%SP
+	ADD $2,%SI
+	DEC %CX
+	JNZ 1b
+	RET
+	
+DisplayAL:
+	pushw %bx
+	pushw %ax
+	cmp $10,%al
+	jl 1f
+	subb $10,%al
+	addb $'A',%al
+	jmp 2f
+1:
+	addb $'0',%al
+2:
+	movw $7,%bx
+	movb $0xe,%ah
+	int $0x10	
+	popw %ax
+	popw %bx	
+	ret
+DisplayMsg:
+	MOVW %SP,%BP
+	MOVW 2(%BP),%SI
+	STI
+	CLD
+msg_loop:
+        LODSB
+        ANDB %al,%al
+        JZ _end
+        movb $0xe,%ah
+        movw $7,%bx
+        int $0x10
+        jmp msg_loop
+_end:
+	ret
+ReadPacket:
+	MOVW %SP,%BP
+	PUSHW %CX
+	MOVB $0x42,%AH
+	MOVW $Packet,%BX
+	MOVW $PacketSize,%SI
+	MOVB $16,(%BX,%SI,1)
+	MOVW $BlockCount,%SI
+	MOVW 6(%BP),%CX
+	MOVW %CX,(%BX,%SI,1)
+	MOVW $BufferOff,%SI
+	MOVW 4(%BP),%CX
+	MOVW %CX,(%BX,%SI,1)
+	MOVW $BufferSeg,%SI
+	MOVW 2(%BP),%CX
+	MOVW %CX,(%BX,%SI,1)
+	MOVW $BlockNum0,%SI
+	MOVL $0,(%BX,%SI,1)
+	MOVW $BlockNum1,%SI
+	MOVL $0,(%BX,%SI,1)
+	MOVW $Packet,%SI
+	PUSHW $PrepareToRead
+	CALL DisplayMsg
+	ADD $2,%SP
+	INT $0x13
+	JC ReadErr
+	JNC ReadOk
+ReadErr:
+	MOVW $0,%AX
+	PUSHW $ReadErrMsg
+	CALL DisplayMsg
+	ADD $2,%SP
+	PUSHW %AX
+	CALL DisplayWord
+	ADD $2,%SP
+	PUSHW $_return
+	CALL DisplayMsg
+	ADD $2,%SP
+	PUSHW $Packet
+	PUSHW $8
+	CALL DisplayMem
+	ADD $4,%SP
+	POPW %CX
+	RET
+ReadOk:
+	MOVW $1,%AX
+	PUSHW $ReadOkMsg
+	CALL DisplayMsg
+	ADD $2,%SP
+	POPW %CX
+	RET
+PrepareToRead:
+	.ascii "going to read\r\n"
+	.byte 0
+ReadErrMsg:
+	.ascii "Read Err"
+	.byte 0
+ReadOkMsg:
+	.ascii "Read Ok\r\n"
+	.byte 0
+Packet:
+PacketSize=.-Packet
+	.BYTE 0x10 
+BlockCount=.-Packet
+	.WORD 1
+BufferOff=.-Packet
+	.WORD 0x0400
+BufferSeg=.-Packet
+	.WORD 0x07c0 
+BlockNum0=.-Packet
+	.LONG 16
+BlockNum1=.-Packet
+	.LONG 0 
+_s_operate_msg:
+.ascii "this is DDKJiang's Operating System 2\r\n"
+.byte 0
+_return:
+.ascii "\r\n"
+.byte 0
+sector_no:
+.word 18
+len=.-_s_operate_msg
+.org 1022
+.word 0xAA55
